@@ -1,0 +1,15 @@
+opencv-python
+numpy
+Pillow
+moviepy
+python-dotenv
+transformers
+accelerate
+safetensors
+huggingface-hub
+diffusers
+# Choose the correct torch for your platform:
+torch
+# For CUDA 12.x builds you could do instead (uncomment and use):
+# --extra-index-url https://download.pytorch.org/whl/cu121
+# torch torchvision torchaudio
