@@ -38,13 +38,25 @@ Copy `.env.example` to `.env` and adjust.
 1) Put images into `inputs/photos/`.
 2) Enhance:
 ```bash
+python app.py --cartoon
+python app.py --meme "when prod works" "but only on my machine"
+python app.py --sticker inputs/stickers/sunglasses.png --sticker-scale 0.25 --sticker-pos bottom-right
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -U pip wheel
+pip install -r requirements.txt
+
 python app.py --enhance
 ```
 3) Funny:
 ```bash
+# Install ffmpeg via your OS package manager
+# (Optional) huggingface-cli login
+python app.py --enhance
 python app.py --cartoon
 python app.py --meme "when prod works" "but only on my machine"
-python app.py --sticker inputs/stickers/sunglasses.png --sticker-scale 0.25 --sticker-pos bottom-right
+python app.py --stylize "anime watercolor, soft light"
+python app.py --video 15
 ```
 4) Style transfer (Stable Diffusion img2img):
 ```bash
