@@ -13,3 +13,18 @@ torch
 # For CUDA 12.x builds you could do instead (uncomment and use):
 # --extra-index-url https://download.pytorch.org/whl/cu121
 # torch torchvision torchaudio
+
+# Automation & API dependencies
+aiohttp
+aiofiles
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+mcp
+asyncio-mqtt
+pydantic
+uvicorn
+fastapi
+requests
+websockets

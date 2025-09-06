@@ -1,0 +1,249 @@
+{
+  "name": "AI Photo Video Enhancer - YouTube Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "process-images",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "ai-photo-enhancer"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "input_images",
+              "value": "={{ $json.images }}"
+            },
+            {
+              "name": "audio_file",
+              "value": "={{ $json.audio_url }}"
+            },
+            {
+              "name": "video_duration",
+              "value": "={{ $json.duration || 45 }}"
+            },
+            {
+              "name": "youtube_title",
+              "value": "={{ $json.title || 'AI Enhanced Studio Ghibli Video' }}"
+            },
+            {
+              "name": "youtube_description",
+              "value": "={{ $json.description || 'Automatically generated video with AI-enhanced Studio Ghibli style images and background music.' }}"
+            },
+            {
+              "name": "youtube_tags",
+              "value": "={{ $json.tags || ['AI', 'Studio Ghibli', 'Photo Enhancement', 'Automation', 'Art'] }}"
+            },
+            {
+              "name": "privacy",
+              "value": "={{ $json.privacy || 'unlisted' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-parameters",
+      "name": "Extract Parameters",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "python3 mcp_client.py",
+        "arguments": "process_and_upload",
+        "additionalFields": {
+          "workingDirectory": "/Users/cars24/Downloads/ai-photo-video-enhancer"
+        }
+      },
+      "id": "mcp-process-upload",
+      "name": "MCP Process & Upload",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.stdout }}",
+              "operation": "contains",
+              "value2": "success"
+            }
+          ]
+        }
+      },
+      "id": "check-success",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.parse($json.stdout) }}"
+      },
+      "id": "success-response",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": {
+          "status": "error",
+          "message": "Processing failed",
+          "error": "={{ $json.stderr || $json.stdout }}"
+        }
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 400]
+    },
+    {
+      "parameters": {
+        "subject": "AI Video Processing Complete",
+        "message": "Your AI-enhanced video has been successfully processed and uploaded to YouTube!\n\nYouTube URL: {{ JSON.parse($json.stdout).youtube.youtube_url }}\nProcessed Images: {{ JSON.parse($json.stdout).processing.processed_images }}\nVideo Duration: {{ JSON.parse($json.stdout).processing.video_duration }}s",
+        "options": {}
+      },
+      "id": "email-notification",
+      "name": "Email Notification",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1340, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "text": "🎬✨ New AI-enhanced video uploaded! \n\nYouTube: {{ JSON.parse($json.stdout).youtube.youtube_url }}\n\n#AI #StudioGhibli #Automation #VideoCreation",
+        "additionalFields": {}
+      },
+      "id": "twitter-post",
+      "name": "Twitter Post",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 1,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.webhook_url }}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "status",
+              "value": "completed"
+            },
+            {
+              "name": "youtube_url",
+              "value": "={{ JSON.parse($json.stdout).youtube.youtube_url }}"
+            },
+            {
+              "name": "video_id",
+              "value": "={{ JSON.parse($json.stdout).youtube.video_id }}"
+            }
+          ]
+        }
+      },
+      "id": "webhook-callback",
+      "name": "Webhook Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1340, 400]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Parameters": {
+      "main": [
+        [
+          {
+            "node": "MCP Process & Upload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Process & Upload": {
+      "main": [
+        [
+          {
+            "node": "Check Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Success": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Response": {
+      "main": [
+        [
+          {
+            "node": "Email Notification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Twitter Post",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Webhook Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {},
+  "createdAt": "2024-08-24T14:00:00.000Z",
+  "updatedAt": "2024-08-24T14:00:00.000Z",
+  "id": "ai-photo-video-enhancer-workflow"
+}

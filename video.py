@@ -1,9 +1,10 @@
-from moviepy import ImageClip, concatenate_videoclips, VideoClip, CompositeVideoClip
+from moviepy import ImageClip, concatenate_videoclips, VideoClip, CompositeVideoClip, AudioFileClip, concatenate_audioclips
 from PIL import Image
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
+import os
 
-def ken_burns_from_folder(images_dir: Union[str, Path], out_path: Union[str, Path], duration=12, fps=30):
+def ken_burns_from_folder(images_dir: Union[str, Path], out_path: Union[str, Path], duration=12, fps=30, audio_path: Optional[Union[str, Path]] = None):
     paths = sorted([p for p in Path(images_dir).glob('*') if p.suffix.lower() in {'.png','.jpg','.jpeg','.webp'}])
     if not paths:
         raise RuntimeError('No images found for video.')
@@ -70,15 +71,50 @@ def ken_burns_from_folder(images_dir: Union[str, Path], out_path: Union[str, Pat
     # Since all clips now have the same size and format, concatenation should be smooth
     final = concatenate_videoclips(clips, method='chain')
     
+    # Add background audio if provided
+    if audio_path and Path(audio_path).exists():
+        print(f'Adding background audio: {audio_path}')
+        try:
+            audio_clip = AudioFileClip(str(audio_path))
+            
+            # Adjust audio duration to match video duration
+            video_duration = final.duration
+            if audio_clip.duration > video_duration:
+                # Trim audio to video length
+                audio_clip = audio_clip.subclipped(0, video_duration)
+                print(f'Audio trimmed to {video_duration:.1f} seconds')
+            elif audio_clip.duration < video_duration:
+                # Loop audio to match video length
+                loops_needed = int(video_duration / audio_clip.duration) + 1
+                audio_clip = concatenate_audioclips([audio_clip] * loops_needed).subclipped(0, video_duration)
+                print(f'Audio looped to match video duration of {video_duration:.1f} seconds')
+            
+            # Set audio to video
+            final = final.with_audio(audio_clip)
+            print('✅ Background audio successfully added')
+            
+        except Exception as e:
+            print(f'⚠️ Warning: Could not add audio - {e}')
+            print('Proceeding with video generation without audio...')
+    elif audio_path:
+        print(f'⚠️ Warning: Audio file not found: {audio_path}')
+        print('Proceeding with video generation without audio...')
+    
     print(f'Writing video to {out_path}...')
     # Write the final video with consistent frame rate
-    final.write_videofile(str(out_path), fps=fps, codec='libx264', bitrate='5000k')
+    if final.audio is not None:
+        # Include audio in output
+        print('🎵 Writing video with background audio...')
+        final.write_videofile(str(out_path), fps=fps, codec='libx264', audio_codec='aac', bitrate='5000k')
+    else:
+        # Video only
+        print('🎬 Writing video without audio...')
+        final.write_videofile(str(out_path), fps=fps, codec='libx264', bitrate='5000k')
     
     # Clean up temporary files
-    import os
     for i in range(len(clips)):
         temp_path = f"/tmp/temp_img_{i}.png"
         if os.path.exists(temp_path):
             os.remove(temp_path)
     
-    print('Video generation completed!')
+    print('🎬✨ Video generation completed with background audio support!')
